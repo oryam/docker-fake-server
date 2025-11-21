@@ -20,6 +20,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "faker": "^6.6.6"
+    "faker": "^5.5.3"
   }
 }
