@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affichage de données JSON</title>
+    <style>
+        /* Styles CSS */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        #container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: #0056b3;
+            text-align: center;
+        }
+
+        #callButton {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        #callButton:hover {
+            background-color: #0056b3;
+        }
+
+        #dataDisplay {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            min-height: 50px; /* Pour un meilleur rendu initial */
+        }
+
+        .data-item {
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 5px;
+        }
+
+        .data-label {
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h1>Service de données Utilisateur</h1>
+        <button id="callButton">Call me</button>
+        
+        <div id="dataDisplay">
+            Cliquez sur "Call me" pour récupérer les données.
+        </div>
+    </div>
+
+    <script>
+        // Logique JavaScript
+        document.getElementById('callButton').addEventListener('click', fetchData);
+
+        const ENDPOINT = 'http://localhost:3000/api/user';
+        const dataDisplay = document.getElementById('dataDisplay');
+
+        /**
+         * Fonction asynchrone pour appeler le service JSON.
+         */
+        async function fetchData() {
+            dataDisplay.innerHTML = 'Chargement des données...';
+            
+            try {
+                // Utilisation de l'API Fetch pour faire l'appel HTTP
+                const response = await fetch(ENDPOINT);
+
+                if (!response.ok) {
+                    // Lance une erreur si la réponse HTTP n'est pas OK (statut 4xx ou 5xx)
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+
+                // Convertit la réponse en objet JavaScript (JSON)
+                const userData = await response.json();
+                
+                // Affiche les données dans le DOM
+                displayData(userData);
+
+            } catch (error) {
+                // Gère les erreurs (problèmes réseau, erreur HTTP, parsing JSON...)
+                console.error('Erreur lors de la récupération des données:', error);
+                dataDisplay.innerHTML = `<p style="color: red;"> Erreur: Impossible de joindre le service ou de traiter les données. Vérifiez que le serveur (${ENDPOINT}) est bien lancé.</p>`;
+            }
+        }
+
+        /**
+         * Affiche les données utilisateur dans l'élément dataDisplay.
+         * @param {Object} data - L'objet utilisateur retourné par le service.
+         */
+        function displayData(data) {
+            dataDisplay.innerHTML = `<h2>Données Récupérées</h2>`;
+            
+            // On s'assure que data est bien un objet et qu'il n'est pas vide
+            if (data && typeof data === 'object') {
+                for (const key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        const value = data[key];
+                        // Crée des éléments pour afficher chaque paire clé/valeur
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'data-item';
+                        itemDiv.innerHTML = `<span class="data-label">${key.charAt(0).toUpperCase() + key.slice(1)}:</span> ${value}`;
+                        dataDisplay.appendChild(itemDiv);
+                    }
+                }
+            } else {
+                 dataDisplay.innerHTML = `<p style="color: orange;"> Service OK, mais les données reçues ne sont pas au format attendu.</p>`;
+            }
+        }
+    </script>
+
+</body>
+</html>
