@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Todo List (Local & DnD)</title>
+    <title>Simple Todo List</title>
     <style>
         /* 🎨 Styles CSS pour le design et le Drag and Drop */
         
@@ -148,19 +148,18 @@
 <body>
 
     <div id="app-container">
-        <h1>📝 Ma Todo List Locale</h1>
+        <h1>Ma Todo List Locale</h1>
 
         <form id="todo-form">
             <input type="text" id="new-todo-input" placeholder="Ajouter une nouvelle tâche..." required>
             <button type="submit" id="add-todo-btn">Ajouter</button>
         </form>
 
-        <ul id="todo-list">
-            </ul>
+        <ul id="todo-list"></ul>
     </div>
 
     <script>
-        // 💻 Logique JavaScript
+        // Logique JavaScript
         const TODO_STORAGE_KEY = 'simpleTodoItems';
         const todoList = document.getElementById('todo-list');
         const todoForm = document.getElementById('todo-form');
