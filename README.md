@@ -47,7 +47,7 @@ app.get('/api/user', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Mock server running on http://localhost:${PORT}`);
+  console.log(`Mock server running on http://localhost:${PORT}/api/user`);
 });
 ```
 
