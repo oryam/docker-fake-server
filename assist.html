@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Todo List (Local & DnD)</title>
+    <style>
+        /* 🎨 Styles CSS pour le design et le Drag and Drop */
+        
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f4f4f9;
+            --card-bg: #fff;
+            --shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* --- Section d'ajout de tâche --- */
+        #todo-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #new-todo-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        #add-todo-btn {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #add-todo-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* --- Liste de tâches --- */
+        #todo-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 8px;
+            background-color: #f9f9f9;
+            border-left: 5px solid var(--primary-color);
+            border-radius: 5px;
+            box-shadow: var(--shadow);
+            cursor: grab; /* Indique qu'on peut glisser */
+            transition: background-color 0.3s, opacity 0.3s;
+        }
+
+        .todo-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Styles pour le Drag and Drop */
+        .dragging {
+            opacity: 0.5;
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .todo-text {
+            flex-grow: 1;
+            margin-right: 15px;
+            word-break: break-word; /* Gère les longs mots */
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+            border-left-color: #28a745; /* Vert pour complété */
+            background-color: #e9f7eb;
+        }
+
+        /* Bouton de suppression */
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .delete-btn:hover {
+            color: #b02a37;
+        }
+
+        /* --- Design Responsif --- */
+        @media (max-width: 600px) {
+            #app-container {
+                padding: 15px;
+                margin: 10px;
+            }
+
+            #todo-form {
+                flex-direction: column;
+            }
+
+            #add-todo-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <h1>📝 Ma Todo List Locale</h1>
+
+        <form id="todo-form">
+            <input type="text" id="new-todo-input" placeholder="Ajouter une nouvelle tâche..." required>
+            <button type="submit" id="add-todo-btn">Ajouter</button>
+        </form>
+
+        <ul id="todo-list">
+            </ul>
+    </div>
+
+    <script>
+        // 💻 Logique JavaScript
+        const TODO_STORAGE_KEY = 'simpleTodoItems';
+        const todoList = document.getElementById('todo-list');
+        const todoForm = document.getElementById('todo-form');
+        const newTodoInput = document.getElementById('new-todo-input');
+        let todos = [];
+        let draggedItem = null;
+
+        // --- 1. Gestion du Stockage Local ---
+
+        /**
+         * Charge les tâches depuis localStorage.
+         */
+        function loadTodos() {
+            const storedTodos = localStorage.getItem(TODO_STORAGE_KEY);
+            if (storedTodos) {
+                // Parse le JSON stocké en tableau d'objets
+                todos = JSON.parse(storedTodos);
+            }
+        }
+
+        /**
+         * Sauvegarde le tableau de tâches actuel dans localStorage.
+         */
+        function saveTodos() {
+            // Convertit le tableau d'objets en chaîne JSON pour le stockage
+            localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos));
+        }
+
+        // --- 2. Fonctions de Création et de Rendu ---
+
+        /**
+         * Crée l'élément DOM (li) pour une seule tâche.
+         * @param {Object} todo - L'objet tâche {text, completed}.
+         * @param {number} index - L'index de la tâche dans le tableau 'todos'.
+         * @returns {HTMLLIElement} L'élément li créé.
+         */
+        function createTodoElement(todo, index) {
+            const li = document.createElement('li');
+            li.className = 'todo-item';
+            // Ajoute l'attribut index pour le Drag and Drop et la mise à jour
+            li.dataset.index = index;
+            // Rend l'élément draggable
+            li.draggable = true;
+
+            if (todo.completed) {
+                li.classList.add('completed');
+            }
+
+            // Texte de la tâche
+            const spanText = document.createElement('span');
+            spanText.className = 'todo-text';
+            spanText.textContent = todo.text;
+            
+            // Bouton de suppression
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '&times;'; // Symbole "x"
+
+            // Ajout des éléments au li
+            li.appendChild(spanText);
+            li.appendChild(deleteBtn);
+
+            // Événements
+            li.addEventListener('click', () => toggleTodo(index));
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Empêche l'événement click du li
+                deleteTodo(index);
+            });
+            
+            // Ajout des événements Drag and Drop
+            addDnDEvents(li);
+
+            return li;
+        }
+
+        /**
+         * Met à jour l'affichage de la liste complète.
+         */
+        function renderTodos() {
+            // Efface le contenu actuel
+            todoList.innerHTML = ''; 
+            
+            // Recrée tous les éléments li
+            todos.forEach((todo, index) => {
+                const li = createTodoElement(todo, index);
+                todoList.appendChild(li);
+            });
+            
+            saveTodos(); // Sauvegarde après chaque rendu complet
+        }
+
+        // --- 3. Gestion des Actions (CRUD) ---
+
+        /**
+         * Ajoute une nouvelle tâche.
+         * @param {string} text - Le texte de la nouvelle tâche.
+         */
+        function addTodo(text) {
+            if (text.trim() === '') return;
+
+            const newTodo = {
+                text: text.trim(),
+                completed: false
+            };
+            todos.push(newTodo);
+            renderTodos();
+            newTodoInput.value = ''; // Réinitialise l'input
+        }
+
+        /**
+         * Inverse l'état 'completed' d'une tâche.
+         * @param {number} index - L'index de la tâche à modifier.
+         */
+        function toggleTodo(index) {
+            // Le "!" inverse la valeur booléenne
+            todos[index].completed = !todos[index].completed; 
+            renderTodos();
+        }
+
+        /**
+         * Supprime une tâche.
+         * @param {number} index - L'index de la tâche à supprimer.
+         */
+        function deleteTodo(index) {
+            // Supprime 1 élément à partir de l'index donné
+            todos.splice(index, 1);
+            renderTodos();
+        }
+
+        // --- 4. Gestion du Drag and Drop (DnD) ---
+
+        /**
+         * Ajoute les écouteurs d'événements DnD à un élément li.
+         * @param {HTMLLIElement} li - L'élément de la liste.
+         */
+        function addDnDEvents(li) {
+            li.addEventListener('dragstart', handleDragStart);
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('drop', handleDrop);
+            li.addEventListener('dragend', handleDragEnd);
+        }
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            // Définir les données à transférer (ici, l'index de l'élément)
+            e.dataTransfer.setData('text/plain', this.dataset.index);
+            
+            // Utiliser setTimeout pour s'assurer que la classe 'dragging' est ajoutée *après* le début du drag
+            setTimeout(() => {
+                this.classList.add('dragging');
+            }, 0);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Nécessaire pour permettre le drop
+            const target = this;
+            
+            // Évite de traiter le glissement sur l'élément en cours de glissement
+            if (target !== draggedItem && !target.classList.contains('dragging')) {
+                // Calcule si l'élément glissé doit être inséré avant ou après
+                const bounding = target.getBoundingClientRect();
+                const offset = bounding.y + (bounding.height / 2);
+
+                if (e.clientY < offset) {
+                    // Insérer avant (drag vers le haut)
+                    todoList.insertBefore(draggedItem, target);
+                } else {
+                    // Insérer après (drag vers le bas)
+                    todoList.insertBefore(draggedItem, target.nextSibling);
+                }
+            }
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            // Le repositionnement est géré dans handleDragOver
+        }
+        
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            draggedItem = null;
+            
+            // Mise à jour de l'ordre dans le tableau JS après le drop
+            updateTodoOrder();
+        }
+
+        /**
+         * Met à jour le tableau 'todos' pour refléter le nouvel ordre DOM.
+         */
+        function updateTodoOrder() {
+            const newOrder = [];
+            // Parcourt tous les li dans le DOM
+            todoList.querySelectorAll('.todo-item').forEach(li => {
+                // Utilise l'index original stocké dans le data-attribute pour retrouver l'objet
+                const originalIndex = parseInt(li.dataset.index);
+                newOrder.push(todos[originalIndex]);
+            });
+
+            // Remplace l'ancien tableau par le nouveau
+            todos = newOrder;
+            // Le rendu complet recalcule les data-index des li basés sur le nouvel ordre
+            renderTodos(); 
+        }
+
+        // --- 5. Initialisation ---
+
+        // Événement de soumission du formulaire
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Empêche le rechargement de la page
+            addTodo(newTodoInput.value);
+        });
+
+        // Fonction principale d'initialisation
+        function init() {
+            loadTodos();
+            renderTodos();
+        }
+
+        // Lancement de l'application
+        init();
+
+    </script>
+
+</body>
+</html>
