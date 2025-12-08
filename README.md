@@ -88,3 +88,11 @@ Démarrer le conteneur.
 docker run -d -p 127.0.0.1:3000:3000 fake-server
 ```
 Visiter la page `http://localhost:3000/api/user`
+
+
+## 5. Dépannage
+
+Sur Windows, pour débloquer les contraintes de sécurité lié à `npm`, exécuter la ligne de commande suivante en mode administrateur :
+```
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope LocalMachine
+```
